@@ -49,3 +49,54 @@ def test_probe_and_sample(clip: Path) -> None:
 def test_grab_frame_respects_max_side(clip: Path) -> None:
     frame = grab_frame(clip, 12.0, max_side=320)
     assert frame.size == (320, 180)
+
+
+@pytest.mark.ffmpeg
+def test_a_tile_and_a_grab_at_the_same_second_are_the_same_frame(tmp_path: Path) -> None:
+    """Sheets and full-frame grabs must agree on what "the frame at 3 s" is.
+
+    With ffmpeg's default fps rounding the tile labelled n showed the frame at n + 0.47 s.
+    """
+    import subprocess
+
+    from PIL import ImageChops, ImageStat
+
+    ramp = tmp_path / "ramp.mp4"
+    subprocess.run(
+        [
+            "ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+            "-i", "nullsrc=s=64x64:r=30:d=5,format=yuvj444p,geq=lum='mod(N*7,256)':cb='mod(N*13,256)':cr=128",
+            "-c:v", "libx264", "-qp", "0", "-pix_fmt", "yuvj444p", str(ramp),
+        ],
+        check=True,
+    )  # fmt: skip
+    # Ground truth: every frame, decoded without any frame-rate filter. Frame k is at k / 30 s.
+    raw = subprocess.run(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-i",
+            str(ramp),
+            "-fps_mode",
+            "passthrough",
+            "-pix_fmt",
+            "rgb24",
+            "-f",
+            "rawvideo",
+            "-",
+        ],
+        capture_output=True,
+        check=True,
+    ).stdout
+    size = 64 * 64 * 3
+    truth = [Image.frombytes("RGB", (64, 64), raw[i : i + size]) for i in range(0, len(raw) - size + 1, size)]
+
+    def at(image: Image.Image) -> float:
+        diffs = [
+            sum(ImageStat.Stat(ImageChops.difference(image.resize((64, 64)), ref)).mean) for ref in truth
+        ]
+        return round(diffs.index(min(diffs)) / 30, 3)
+
+    assert [at(tile) for tile in list(sample_frames(ramp, 1.0, (64, 64)))[:5]] == [0.0, 1.0, 2.0, 3.0, 4.0]
+    assert [at(grab_frame(ramp, float(t), 64)) for t in range(4)] == [0.0, 1.0, 2.0, 3.0]

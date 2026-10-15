@@ -81,7 +81,12 @@ def probe(path: Path) -> Probe:
 
 
 def sample_frames(path: Path, fps: float, size: tuple[int, int]) -> Iterator[Image.Image]:
-    """Decode `fps` frames per second, each letterboxed to exactly `size`. Frame i is at i / fps seconds."""
+    """Decode `fps` frames per second, each letterboxed to exactly `size`. Frame i is at i / fps seconds.
+
+    `round=up` makes slot i the last source frame at or before i / fps. With ffmpeg's default
+    (`near`) it is the last frame before (i + 0.5) / fps instead: measured on a 30 fps source, the
+    slot labelled 8 s showed 8.47 s, so a sub-second event on a tile was not where its label said.
+    """
     width, height = size
     command = [
         _tool("ffmpeg"),
@@ -94,7 +99,7 @@ def sample_frames(path: Path, fps: float, size: tuple[int, int]) -> Iterator[Ima
         "0:v:0",
         "-vf",
         (
-            f"fps={fps},scale={width}:{height}:force_original_aspect_ratio=decrease,"
+            f"fps={fps}:round=up,scale={width}:{height}:force_original_aspect_ratio=decrease,"
             f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2"
         ),
         "-pix_fmt",
@@ -125,6 +130,7 @@ def grab_frame(path: Path, at: float, max_side: int = MAX_SIDE) -> Image.Image:
         "error",
         "-nostdin",
         "-ss",
+        # An accurate seek returns the frame at t: the same one sample_frames puts on the tile labelled t.
         f"{max(at, 0):.3f}",
         "-i",
         str(path),
