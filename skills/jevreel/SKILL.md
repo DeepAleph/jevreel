@@ -19,8 +19,8 @@ descriptions: reading, describing and concluding is your job.
 
 ## Workflow
 
-1. **Index once.** MCP `index_video(source)` or `jevreel index <file-or-url>`. Note the returned `id`.
-   Re-indexing an indexed video returns at once.
+1. **Index once.** MCP `index_video(source)` or `jevreel index <file-or-url>`. Later calls take the
+   returned `id`, the path, or the title ("tears of steel"). Re-indexing an indexed video returns at once.
 2. **Find moments.** `ask_video(video, query)` / `jevreel ask <id> "<query>"`.
    - Write the query as a plain description of what would be visible or said:
      "a bar chart on a slide", "someone opens a laptop", "the speaker mentions pricing".
@@ -50,7 +50,8 @@ answers all of its questions in one request. Then filter the answers as often as
   CLI: `jevreel lens <id> lens.toml`. To include a lens while indexing, pass it to `index_video`
   (or `jevreel index --lens`); it then costs almost nothing extra.
 - `query_timeline(video, "helmet_off > 0.7")` / `jevreel query <id> "helmet_off > 0.7 and vehicle == truck"`.
-  Conditions are `column op value` joined by `and`; omit `where` to see every minute and its columns.
+  Conditions are `column op value` joined by `and`; quote a value that contains "and"
+  (`place == 'books and a desk'`). Omit `where` to see every minute and its columns.
   Yes/no questions also give `<name>_at`, the second it is most visible.
 - The default timeline columns are there too: `people`, `talking_to_camera`, `screen_or_slides`,
   `text_on_screen`, `cut`, `setting`, `activity` (0-3), `keyframe`.

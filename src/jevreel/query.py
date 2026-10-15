@@ -4,7 +4,8 @@
     jevreel query <video> "safety.helmet_off >= 0.7"
 
 Conditions are `column op value`, joined with `and`. Operators: > >= < <= == !=. Lens columns are
-`lens.question`; a bare question name works when only one lens has it.
+`lens.question`; a bare question name works when only one lens has it. Quote a value that contains
+"and": place == 'books and a desk'.
 """
 
 import operator
@@ -82,7 +83,7 @@ def query(video: Video, where: str | None = None) -> QueryResult:
     rows = timeline_rows(video)
     columns = sorted({c for row in rows for c in row} - {"sheet", "start"})
     if where:
-        for clause in re.split(r"\s+and\s+", where.strip(), flags=re.IGNORECASE):
+        for clause in split_conditions(where):
             match = _CONDITION.match(clause)
             if match is None:
                 raise ValueError(
@@ -91,6 +92,11 @@ def query(video: Video, where: str | None = None) -> QueryResult:
             column, op, raw = _resolve(match[1], columns), _OPS[match[2]], _value(match[3])
             rows = [row for row in rows if _compare(row.get(column), op, raw)]
     return QueryResult(video=video.id, where=where, columns=columns, rows=rows)
+
+
+def split_conditions(where: str) -> list[str]:
+    """Split on `and`, except inside a quoted value (an even number of quotes must follow)."""
+    return re.split(r"\s+and\s+(?=(?:[^'\"]*['\"][^'\"]*['\"])*[^'\"]*$)", where.strip(), flags=re.IGNORECASE)
 
 
 def _compare(cell: Any, op: Callable[[Any, Any], bool], value: Any) -> bool:

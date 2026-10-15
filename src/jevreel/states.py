@@ -17,6 +17,7 @@ from jevreel.config import estimated_cost_usd
 from jevreel.judge import Judge
 from jevreel.media import fit_for_jev, jpeg_bytes
 from jevreel.sheets import SheetInfo, tile_ids
+from jevreel.sources import local_file
 from jevreel.store import Video
 from jevreel.timefmt import clock, span
 from jevreel.transcript import Segment
@@ -81,7 +82,7 @@ def image_asset(image: Image.Image) -> JevImage:
 
 
 def reference_asset(path: Path) -> JevImage:
-    with Image.open(path) as image:
+    with Image.open(local_file(str(path), "reference photo")) as image:
         return image_asset(image)
 
 

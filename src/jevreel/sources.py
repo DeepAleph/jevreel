@@ -16,6 +16,20 @@ def is_url(source: str) -> bool:
     return source.startswith(("http://", "https://"))
 
 
+def local_file(source: str, what: str = "video file") -> Path:
+    """The absolute path of a local file, or an error that says plainly it isn't there.
+
+    The bare OS error on Windows, "[WinError 2] The system cannot find the file specified", reads like
+    a missing program: an agent took it for a missing ffmpeg and gave up.
+    """
+    path = Path(source).expanduser()
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"No {what} at {path.resolve()}. Relative paths are resolved from {Path.cwd()}."
+        )
+    return path.resolve()
+
+
 def video_id(source: str) -> str:
     """Stable 12-character ID: a URL by its text, a file by its absolute path, size and modification time."""
     if is_url(source):

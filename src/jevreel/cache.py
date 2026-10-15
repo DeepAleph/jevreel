@@ -33,7 +33,8 @@ def _canonical(value: Any, memo: dict[int, str]) -> Any:
     if isinstance(value, BaseModel):
         return _canonical(value.model_dump(), memo)
     if isinstance(value, Mapping):
-        return {str(k): _canonical(v, memo) for k, v in sorted(value.items(), key=lambda kv: str(kv[0]))}
+        # Order is kept, not sorted: it is part of what Jev reads, above all a Choice's options.
+        return {str(k): _canonical(v, memo) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
         return [_canonical(v, memo) for v in value]
     return value

@@ -17,7 +17,7 @@ from jevreel.judge import Judge
 from jevreel.lenses import Lens, lens_path, lens_questions, read_lens, run_lens, save_lens
 from jevreel.media import probe, sample_frames
 from jevreel.sheets import build_sheets, choose_layout
-from jevreel.sources import fetch_url, is_url, video_id
+from jevreel.sources import fetch_url, is_url, local_file, video_id
 from jevreel.states import Meter, numbered_lines, sheet_asset, sheet_state
 from jevreel.store import Manifest, Store, Video, WindowFacets, now
 from jevreel.timefmt import clock
@@ -111,7 +111,7 @@ async def index_video(
 ) -> IndexResult:
     lenses = lenses or []
     if not is_url(source):
-        source = str(Path(source).expanduser().resolve())
+        source = str(local_file(source))
     vid = video_id(source)
     root = store.dir_for(vid)
     existing = store.load(vid)

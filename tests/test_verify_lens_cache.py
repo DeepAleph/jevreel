@@ -7,8 +7,9 @@ import pytest
 from typesafe_sdk import Choice, Question
 
 from jevreel import Reel, Settings
-from jevreel.cache import CachedJudge
+from jevreel.cache import CachedJudge, cache_key
 from jevreel.lenses import Lens
+from jevreel.query import split_conditions
 from tests.fakes import FakeJudge, choice, noul
 from tests.test_operations import tiles_rule
 
@@ -133,3 +134,24 @@ async def test_cache_answers_repeats_for_free(settings: Settings, clip: Path) ->
     assert [h.time for h in second.hits] == [h.time for h in first.hits] == ["1:07"]
     assert third.requests >= 3 and third.cached == 0
     assert len(fake.calls) == first.requests + third.requests
+
+
+def test_and_inside_a_quoted_value_belongs_to_the_value() -> None:
+    assert split_conditions("place == 'books and a desk' and robot > 0.7 AND gun < 0.5") == [
+        "place == 'books and a desk'",
+        "robot > 0.7",
+        "gun < 0.5",
+    ]
+
+
+def test_choice_option_order_is_part_of_the_cache_key() -> None:
+    def key(*options: str) -> str:
+        return cache_key(
+            "jev-1.14.0",
+            {"about": "x"},
+            {"q": Choice(instructions="Which?", criteria=dict.fromkeys(options))},
+            False,
+        )
+
+    assert key("a", "b", "c") == key("a", "b", "c")
+    assert key("a", "b", "c") != key("c", "a", "b")

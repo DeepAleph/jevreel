@@ -9,6 +9,7 @@ from PIL import Image
 from typesafe_sdk import Box, Choice, Noul, Question, Score, TypeSafeBadRequestError
 
 from jevreel import Reel, Settings
+from jevreel.store import VideoNotFound
 from tests.fakes import FakeJudge, box, choice, noul
 
 pytestmark = pytest.mark.ffmpeg
@@ -53,6 +54,19 @@ async def test_index_without_timeline_needs_no_judge(settings: Settings, clip: P
     async with Reel(settings) as reel:  # no judge: creating one would need an API key
         result = await reel.index(str(clip), timeline=False)
     assert not result.timeline and result.requests == 0
+
+
+async def test_videos_open_by_title_words_or_a_unique_title_prefix(reel: Reel, clip: Path) -> None:
+    indexed = await reel.index(str(clip), timeline=False)
+    for ref in ("clip", "CLIP", "cli"):
+        assert reel.store.open(ref).id == indexed.id
+    with pytest.raises(VideoNotFound):
+        reel.store.open("clips")
+
+
+async def test_a_missing_file_is_reported_as_missing(reel: Reel, tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError, match=r"No video file at .*Relative paths are resolved from"):
+        await reel.index(str(tmp_path / "nowhere.mov"))
 
 
 async def test_ask_finds_the_moment(settings: Settings, clip: Path) -> None:

@@ -10,6 +10,7 @@
 """
 
 import json
+import re
 from datetime import UTC, datetime
 from functools import cached_property
 from pathlib import Path
@@ -125,7 +126,7 @@ class Store:
         return Video(path.parent, Manifest.model_validate_json(path.read_text(encoding="utf-8")))
 
     def open(self, ref: str) -> Video:
-        """Find a video by ID, unique ID prefix, file path, URL or exact title."""
+        """Find a video by ID, unique ID prefix, file path, URL, title, or unique title prefix."""
         candidates = [ref]
         if is_url(ref):
             candidates.insert(0, video_id(ref))
@@ -138,9 +139,15 @@ class Store:
             matches = [p.name for p in self.videos.iterdir() if p.name.startswith(ref)]
             if len(matches) == 1 and (video := self.load(matches[0])):
                 return video
-        titled = [m.id for m in self.list() if m.title.casefold() == ref.casefold()]
-        if len(titled) == 1 and (video := self.load(titled[0])):
-            return video
+        # Titles come from file names, so "tears of steel" should find tears_of_steel.mov, and so
+        # should "tears" while it is the only title starting that way.
+        wanted = _words(ref)
+        titles = [(manifest.id, _words(manifest.title)) for manifest in self.list()]
+        exact = [id_ for id_, title in titles if title == wanted]
+        prefixed = [id_ for id_, title in titles if wanted and title.startswith(wanted)]
+        for matches in (exact, prefixed):
+            if len(matches) == 1 and (video := self.load(matches[0])):
+                return video
         raise VideoNotFound(f"No indexed video matches {ref!r}. Index it first with `jevreel index`.")
 
     def list(self) -> list[Manifest]:
@@ -153,6 +160,10 @@ class Store:
                     Manifest.model_validate_json((root / "manifest.json").read_text(encoding="utf-8"))
                 )
         return sorted(found, key=lambda m: m.created, reverse=True)
+
+
+def _words(text: str) -> str:
+    return " ".join(re.findall(r"[^\W_]+", text.casefold()))
 
 
 def now() -> str:
