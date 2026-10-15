@@ -47,10 +47,10 @@ all = ["jevreel[url,asr]"]
 jevreel = "jevreel.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/Madhav2609/jevreel"
-Repository = "https://github.com/Madhav2609/jevreel"
-Issues = "https://github.com/Madhav2609/jevreel/issues"
-Changelog = "https://github.com/Madhav2609/jevreel/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/DeepAleph/jevreel"
+Repository = "https://github.com/DeepAleph/jevreel"
+Issues = "https://github.com/DeepAleph/jevreel/issues"
+Changelog = "https://github.com/DeepAleph/jevreel/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = ["pytest>=9.1", "pytest-asyncio>=1.4", "ruff>=0.17"]

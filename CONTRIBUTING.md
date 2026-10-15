@@ -5,7 +5,7 @@ Thanks for helping. jevreel is small on purpose; changes that keep it that way a
 ## Set up
 
 ```bash
-git clone https://github.com/Madhav2609/jevreel
+git clone https://github.com/DeepAleph/jevreel
 cd jevreel
 uv sync --all-extras --group dev
 uv run pytest -q

@@ -6,5 +6,5 @@ In short: be respectful, assume good faith, and keep discussion about the work. 
 attacks and discriminatory language are not tolerated in issues, pull requests or any other project
 space.
 
-To report a problem, contact the maintainer privately through GitHub
-([@Madhav2609](https://github.com/Madhav2609)). Reports are handled confidentially.
+To report a problem, contact the maintainers privately through the
+[DeepAleph](https://github.com/DeepAleph) organisation on GitHub. Reports are handled confidentially.

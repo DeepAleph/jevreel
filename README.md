@@ -2,7 +2,7 @@
 
 **A zero-embedding approach to video intelligence, using Jev.**
 
-[![CI](https://github.com/Madhav2609/jevreel/actions/workflows/ci.yml/badge.svg)](https://github.com/Madhav2609/jevreel/actions/workflows/ci.yml)
+[![CI](https://github.com/DeepAleph/jevreel/actions/workflows/ci.yml/badge.svg)](https://github.com/DeepAleph/jevreel/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)
 
@@ -119,7 +119,7 @@ You need Python 3.11+, [FFmpeg](https://ffmpeg.org/download.html) on your PATH, 
 [TypeSafe API key](https://console.typesafe.ai).
 
 ```bash
-uv tool install "jevreel[all] @ git+https://github.com/Madhav2609/jevreel"
+uv tool install "jevreel[all] @ git+https://github.com/DeepAleph/jevreel"
 export TYPESAFE_API_KEY=...
 
 jevreel index talk.mp4                       # prints the video id
@@ -173,13 +173,13 @@ anything, cite times.
 **Claude Code**
 
 ```bash
-claude mcp add jevreel -e TYPESAFE_API_KEY=your-key -- uvx --from "jevreel[all] @ git+https://github.com/Madhav2609/jevreel" jevreel mcp
+claude mcp add jevreel -e TYPESAFE_API_KEY=your-key -- uvx --from "jevreel[all] @ git+https://github.com/DeepAleph/jevreel" jevreel mcp
 ```
 
 **Codex**
 
 ```bash
-codex mcp add jevreel --env TYPESAFE_API_KEY=your-key -- uvx --from "jevreel[all] @ git+https://github.com/Madhav2609/jevreel" jevreel mcp
+codex mcp add jevreel --env TYPESAFE_API_KEY=your-key -- uvx --from "jevreel[all] @ git+https://github.com/DeepAleph/jevreel" jevreel mcp
 ```
 
 **Claude Desktop, Cursor and other `mcpServers` clients**
@@ -189,7 +189,7 @@ codex mcp add jevreel --env TYPESAFE_API_KEY=your-key -- uvx --from "jevreel[all
   "mcpServers": {
     "jevreel": {
       "command": "uvx",
-      "args": ["--from", "jevreel[all] @ git+https://github.com/Madhav2609/jevreel", "jevreel", "mcp"],
+      "args": ["--from", "jevreel[all] @ git+https://github.com/DeepAleph/jevreel", "jevreel", "mcp"],
       "env": { "TYPESAFE_API_KEY": "your-key" }
     }
   }
@@ -201,7 +201,7 @@ VS Code uses the same entry under `"servers"` with `"type": "stdio"`.
 **The skill** (Claude Code, Codex and other agents that read Agent Skills):
 
 ```bash
-npx skills add Madhav2609/jevreel
+npx skills add DeepAleph/jevreel
 ```
 
 Agents without MCP can use the skill with the CLI alone; every command prints JSON.

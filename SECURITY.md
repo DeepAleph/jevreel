@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report vulnerabilities privately through GitHub's
-[security advisories](https://github.com/Madhav2609/jevreel/security/advisories/new), not in a
+[security advisories](https://github.com/DeepAleph/jevreel/security/advisories/new), not in a
 public issue. You should hear back within a week.
 
 ## What to know when running jevreel
