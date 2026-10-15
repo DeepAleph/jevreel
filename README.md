@@ -3,7 +3,7 @@
 **A zero-embedding approach to video intelligence, using Jev.**
 
 [![CI](https://github.com/DeepAleph/jevreel/actions/workflows/ci.yml/badge.svg)](https://github.com/DeepAleph/jevreel/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/DeepAleph/jevreel/blob/main/LICENSE)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)
 
 jevreel lays a video out on labelled contact sheets, one frame per second and sixty frames to an
@@ -12,7 +12,7 @@ parallel. The best windows are re-checked on full frames. Your agent (Claude Cod
 Claude Desktop, anything that speaks MCP) gets back moments, times and probabilities, then looks
 closer itself. No vectors are computed or stored anywhere.
 
-<a href="docs/demo/clips/intro.mp4"><img src="docs/demo/clips/intro.webp" alt="How jevreel works: a 12-minute film becomes 13 contact sheets, Jev judges them in parallel, the best windows are verified on full frames, and the agent gets timed hits" width="100%"></a>
+<a href="https://github.com/DeepAleph/jevreel/blob/main/docs/demo/clips/intro.mp4"><img src="https://raw.githubusercontent.com/DeepAleph/jevreel/main/docs/demo/clips/intro.webp" alt="How jevreel works: a 12-minute film becomes 13 contact sheets, Jev judges them in parallel, the best windows are verified on full frames, and the agent gets timed hits" width="100%"></a>
 
 ## See it work
 
@@ -32,26 +32,26 @@ and the agent's own answer, quoted. Click a clip for the full-resolution video.
 
 ### 1. Find a three-second moment
 
-<a href="docs/demo/clips/a-juice.mp4"><img src="docs/demo/clips/a-juice.webp" alt="Use case 1: screening 13 contact sheets for a juice box, verifying the top windows, and the agent's answer" width="100%"></a>
+<a href="https://github.com/DeepAleph/jevreel/blob/main/docs/demo/clips/a-juice.mp4"><img src="https://raw.githubusercontent.com/DeepAleph/jevreel/main/docs/demo/clips/a-juice.webp" alt="Use case 1: screening 13 contact sheets for a juice box, verifying the top windows, and the agent's answer" width="100%"></a>
 
 ### 2. Search the dialogue
 
-<a href="docs/demo/clips/b-apology.mp4"><img src="docs/demo/clips/b-apology.webp" alt="Use case 2: speech-mode search over caption lines, the picked line, and the agent's answer" width="100%"></a>
+<a href="https://github.com/DeepAleph/jevreel/blob/main/docs/demo/clips/b-apology.mp4"><img src="https://raw.githubusercontent.com/DeepAleph/jevreel/main/docs/demo/clips/b-apology.webp" alt="Use case 2: speech-mode search over caption lines, the picked line, and the agent's answer" width="100%"></a>
 
 ### 3. Read what's on screen
 
-<a href="docs/demo/clips/c-newspaper.mp4"><img src="docs/demo/clips/c-newspaper.webp" alt="Use case 3: finding the newspaper in the first five minutes and the headline the agent read" width="100%"></a>
+<a href="https://github.com/DeepAleph/jevreel/blob/main/docs/demo/clips/c-newspaper.mp4"><img src="https://raw.githubusercontent.com/DeepAleph/jevreel/main/docs/demo/clips/c-newspaper.webp" alt="Use case 3: finding the newspaper in the first five minutes and the headline the agent read" width="100%"></a>
 
 ### 4. Find a person from a photo
 
-<a href="docs/demo/clips/d-captain.mp4"><img src="docs/demo/clips/d-captain.webp" alt="Use case 4: searching by a reference photo, verified windows, and every moment on a timeline" width="100%"></a>
+<a href="https://github.com/DeepAleph/jevreel/blob/main/docs/demo/clips/d-captain.mp4"><img src="https://raw.githubusercontent.com/DeepAleph/jevreel/main/docs/demo/clips/d-captain.webp" alt="Use case 4: searching by a reference photo, verified windows, and every moment on a timeline" width="100%"></a>
 
 The reference photo is a crop of the frame at 9:18, so the 9:17 hit is its own source; the other
 seven are what the search found.
 
 ### 5. Map a whole film
 
-<a href="docs/demo/clips/e-map.mp4"><img src="docs/demo/clips/e-map.webp" alt="Use case 5: an agent-written lens, the per-minute heatmap, the whole-film question, and the agent's map" width="100%"></a>
+<a href="https://github.com/DeepAleph/jevreel/blob/main/docs/demo/clips/e-map.mp4"><img src="https://raw.githubusercontent.com/DeepAleph/jevreel/main/docs/demo/clips/e-map.webp" alt="Use case 5: an agent-written lens, the per-minute heatmap, the whole-film question, and the agent's map" width="100%"></a>
 
 The session starts with two failed calls, left in: a shell command the recording didn't allow, then
 a wrong folder. The error names the folder relative paths resolve from, and the next call works.
@@ -119,7 +119,7 @@ You need Python 3.11+, [FFmpeg](https://ffmpeg.org/download.html) on your PATH, 
 [TypeSafe API key](https://console.typesafe.ai).
 
 ```bash
-uv tool install "jevreel[all] @ git+https://github.com/DeepAleph/jevreel"
+uv tool install "jevreel[all]"
 export TYPESAFE_API_KEY=...
 
 jevreel index talk.mp4                       # prints the video id
@@ -173,13 +173,13 @@ anything, cite times.
 **Claude Code**
 
 ```bash
-claude mcp add jevreel -e TYPESAFE_API_KEY=your-key -- uvx --from "jevreel[all] @ git+https://github.com/DeepAleph/jevreel" jevreel mcp
+claude mcp add jevreel -e TYPESAFE_API_KEY=your-key -- uvx --from "jevreel[all]" jevreel mcp
 ```
 
 **Codex**
 
 ```bash
-codex mcp add jevreel --env TYPESAFE_API_KEY=your-key -- uvx --from "jevreel[all] @ git+https://github.com/DeepAleph/jevreel" jevreel mcp
+codex mcp add jevreel --env TYPESAFE_API_KEY=your-key -- uvx --from "jevreel[all]" jevreel mcp
 ```
 
 **Claude Desktop, Cursor and other `mcpServers` clients**
@@ -189,7 +189,7 @@ codex mcp add jevreel --env TYPESAFE_API_KEY=your-key -- uvx --from "jevreel[all
   "mcpServers": {
     "jevreel": {
       "command": "uvx",
-      "args": ["--from", "jevreel[all] @ git+https://github.com/DeepAleph/jevreel", "jevreel", "mcp"],
+      "args": ["--from", "jevreel[all]", "jevreel", "mcp"],
       "env": { "TYPESAFE_API_KEY": "your-key" }
     }
   }
@@ -306,10 +306,10 @@ A 10-minute 1080p gameplay capture, no speech, every result checked against the 
 
 ## Contributing
 
-Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Coding agents should read
-[AGENTS.md](AGENTS.md).
+Issues and pull requests are welcome. See [CONTRIBUTING.md](https://github.com/DeepAleph/jevreel/blob/main/CONTRIBUTING.md). Coding agents should read
+[AGENTS.md](https://github.com/DeepAleph/jevreel/blob/main/AGENTS.md).
 
 ## License
 
-[MIT](LICENSE). jevreel is an independent project, not affiliated with TypeSafe AI. Jev is
+[MIT](https://github.com/DeepAleph/jevreel/blob/main/LICENSE). jevreel is an independent project, not affiliated with TypeSafe AI. Jev is
 TypeSafe's model and is used through its public API under TypeSafe's terms.

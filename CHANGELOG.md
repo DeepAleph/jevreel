@@ -6,22 +6,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-### Added
-
-- Demo clips in `docs/demo/clips`: five recorded Claude Code sessions using jevreel on
-  *Tears of Steel*.
-- Videos can be named by their title's words or a unique title prefix: "tears of steel" or "tears"
-  finds `tears_of_steel.mov`.
-- `query` values that contain "and" can be quoted: `place == 'books and a desk'`.
-
-### Fixed
-
-- A missing video or reference photo now says which path was tried and where relative paths are
-  resolved from. On Windows the bare OS error read like a missing program, and an agent gave up on it.
-- The answer cache treated requests that differed only in the order of a Choice's options as the
-  same request. Order is part of what Jev reads, so it now counts.
-
-## [0.1.0]
+## [0.1.0] - 2026-10-15
 
 ### Added
 
@@ -40,9 +25,21 @@ All notable changes to this project are documented here. The format follows
 - `zoom`, `transcript`, `whole` (one typed answer about the entire video), `measure`.
 - MCP server (FastMCP 4, background indexing through the tasks extension) with ten tools, and an
   Agent Skill.
+- Demo clips in `docs/demo/clips`: five recorded Claude Code sessions using jevreel on
+  *Tears of Steel*.
+- Videos can be named by their title's words or a unique title prefix: "tears of steel" or "tears"
+  finds `tears_of_steel.mov`.
+- `query` values that contain "and" can be quoted: `place == 'books and a desk'`.
 
 ### Fixed during development
 
 - Sheet tiles and full-frame grabs disagreed by about half a second: ffmpeg's default `fps` rounding
   put the frame at n + 0.47 s on the tile labelled n. Sampling now uses `round=up`, and a test checks
   tiles and grabs against a filter-free decode.
+- A missing video or reference photo now says which path was tried and where relative paths are
+  resolved from. On Windows the bare OS error read like a missing program, and an agent gave up on it.
+- The answer cache treated requests that differed only in the order of a Choice's options as the
+  same request. Order is part of what Jev reads, so it now counts.
+
+[Unreleased]: https://github.com/DeepAleph/jevreel/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/DeepAleph/jevreel/releases/tag/v0.1.0
