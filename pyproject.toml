@@ -1,0 +1,78 @@
+[project]
+name = "jevreel"
+version = "0.1.0"
+description = "Zero-embedding video intelligence: contact sheets + Jev typed decisions, as tools for any coding agent."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Madhav Gupta" }]
+requires-python = ">=3.11"
+keywords = [
+    "video",
+    "video-understanding",
+    "jev",
+    "typesafe",
+    "mcp",
+    "agent-skills",
+    "contact-sheet",
+    "zero-embedding",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "fastmcp[tasks]>=4.1,<5",
+    "pillow>=12.3",
+    "platformdirs>=4.13",
+    "typer>=0.27",
+    "typesafe-sdk[zstd]>=0.7.5",
+]
+
+[project.optional-dependencies]
+# Download videos and their captions from URLs.
+url = ["yt-dlp>=2026.8.19"]
+# Transcribe videos that have no captions, locally.
+asr = ["faster-whisper>=1.2"]
+all = ["jevreel[url,asr]"]
+
+[project.scripts]
+jevreel = "jevreel.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/Madhav2609/jevreel"
+Repository = "https://github.com/Madhav2609/jevreel"
+Issues = "https://github.com/Madhav2609/jevreel/issues"
+Changelog = "https://github.com/Madhav2609/jevreel/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = ["pytest>=9.1", "pytest-asyncio>=1.4", "ruff>=0.17"]
+
+[build-system]
+requires = ["uv_build>=0.11.18,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC", "PTH"]
+ignore = [
+    # The formatter owns line length; what it leaves long is prose in questions and descriptions.
+    "E501",
+    # A stat of one local path is not worth a thread hop; ffmpeg, decoding and Jev calls already get one.
+    "ASYNC240",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = ["ffmpeg: needs ffmpeg and ffprobe on PATH"]

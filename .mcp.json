@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "jevreel": {
+      "command": "uv",
+      "args": ["run", "jevreel", "mcp"]
+    }
+  }
+}

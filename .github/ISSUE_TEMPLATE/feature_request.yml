@@ -1,0 +1,16 @@
+name: Feature request
+description: Something jevreel should be able to do.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you are trying to do
+      description: The question you want to ask of a video, or the workflow you are building.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+      description: How you think jevreel could support it. Optional.

@@ -1,0 +1,29 @@
+name: Bug report
+description: Something jevreel did wrong or failed to do.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command or tool call, what you expected, and what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: The JSON or error jevreel printed. Remove anything private.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Versions
+      description: "`jevreel --version`, `ffmpeg -version` (first line), OS, and the Jev model if not the default."
+    validations:
+      required: true
+  - type: dropdown
+    id: via
+    attributes:
+      label: How you ran it
+      options: [CLI, MCP server, Python API, Agent skill]

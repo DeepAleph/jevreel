@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Environments and secrets
+.venv
+.env
+.env.*
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local jevreel data and media used while developing
+.jevreel/
+*.mp4
+*.mkv
+*.mov
+*.webm
+!tests/fixtures/**
