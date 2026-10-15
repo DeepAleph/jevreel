@@ -37,6 +37,13 @@ class Settings:
     asr_model: str = "small"
     # Caption languages to ask yt-dlp for, in order of preference.
     caption_languages: tuple[str, ...] = ("en", "en-orig", "en.*")
+    # Screen-then-verify: how many top-ranked windows get their candidate frames re-checked at a
+    # larger size, and the lowest screening probability worth re-checking. On the first live test,
+    # windows holding a one-second event screened at 0.27-0.57 while empty ones stayed at 0.03-0.07.
+    verify_top: int = 6
+    verify_floor: float = 0.1
+    # Reuse Jev's answer when the same model gets the same images and questions again.
+    cache: bool = True
 
     @classmethod
     def from_env(cls, **overrides: object) -> "Settings":
@@ -56,6 +63,10 @@ class Settings:
             values["asr_model"] = asr_model
         if languages := env.get("JEVREEL_CAPTION_LANGUAGES"):
             values["caption_languages"] = tuple(lang.strip() for lang in languages.split(",") if lang.strip())
+        if verify_top := env.get("JEVREEL_VERIFY_TOP"):
+            values["verify_top"] = int(verify_top)
+        if cache := env.get("JEVREEL_CACHE"):
+            values["cache"] = cache.strip().lower() not in {"0", "false", "no", "off"}
         settings = cls(**values)  # type: ignore[arg-type]
         return replace(settings, **{key: value for key, value in overrides.items() if value is not None})
 
@@ -69,6 +80,8 @@ class Settings:
             raise ValueError("sheet_overlap must be at least 0 and below tiles_per_sheet.")
         if self.concurrency < 1:
             raise ValueError("concurrency must be at least 1.")
+        if self.verify_top < 0:
+            raise ValueError("verify_top must be 0 (off) or more.")
         return self
 
 

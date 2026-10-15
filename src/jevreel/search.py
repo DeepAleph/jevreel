@@ -14,16 +14,19 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal
 
+from PIL import Image
 from pydantic import BaseModel
 from typesafe_sdk import Choice, Noul, Question, SystemOneResponse
 from typesafe_sdk import Image as JevImage
 
-from jevreel.config import Settings, estimated_cost_usd
+from jevreel.config import Settings
+from jevreel.frames import still
 from jevreel.judge import Judge
 from jevreel.media import jpeg_bytes
 from jevreel.sheets import SheetInfo, shuffled
 from jevreel.states import (
     Meter,
+    image_asset,
     layout_note,
     lines_state,
     numbered_lines,
@@ -60,6 +63,12 @@ class Hit(BaseModel):
     """Probability that it is said in this window, when the transcript was asked about."""
     strong: bool
     rechecked: bool
+    verified: bool = False
+    """Re-checked on full frames around the picked tile; `probability` and `at` then come from those frames."""
+    screened: float | None = None
+    """The contact-sheet probability before verification."""
+    frame: str | None = None
+    """Path of the verified full frame, for looking at directly."""
     also: list[Moment]
     """Other likely moments in the same window."""
     transcript: str | None
@@ -74,6 +83,8 @@ class SearchResult(BaseModel):
     """Windows below the threshold that Jev did not rule out: candidates to zoom into when hits are few."""
     windows_checked: int
     requests: int
+    cached: int
+    """Requests answered from jevreel's cache, at no cost."""
     input_tokens: int
     estimated_usd: float
 
@@ -95,7 +106,8 @@ async def search(
     end: float | None = None,
     threshold: float = 0.5,
     limit: int = 10,
-    recheck: bool = True,
+    recheck: bool = False,
+    verify: bool = True,
 ) -> SearchResult:
     has_speech = video.transcript is not None and bool(video.transcript.segments)
     if reference is not None:
@@ -107,11 +119,11 @@ async def search(
 
     meter = Meter(judge)
     sheets = [s for s in video.manifest.sheets if _in_range(s, start, end)]
+    ref = reference_asset(reference) if reference is not None else None
+    what = note or "person or object"
     if mode == "speech":
         found = await asyncio.gather(*(_speech_window(video, meter, settings, s, query) for s in sheets))
     else:
-        ref = reference_asset(reference) if reference is not None else None
-        what = note or "person or object"
         found = await asyncio.gather(
             *(
                 _visual_sheet(
@@ -122,8 +134,24 @@ async def search(
         )
     answered = _dedupe([hit for hit in found if hit is not None])
     answered.sort(key=lambda hit: hit.probability, reverse=True)
+    if verify and mode != "speech" and settings.verify_top:
+        # Screening ranks windows well even when it can't confirm a one-second event, so the top
+        # windows by rank, not by threshold, get their candidate frames re-checked at a larger size.
+        candidates = [
+            hit for hit in answered if hit.anchor.startswith("T") and hit.probability >= settings.verify_floor
+        ][: settings.verify_top]
+        checked = await asyncio.gather(
+            *(_verify(video, meter, settings, hit, query=query, ref=ref, what=what) for hit in candidates)
+        )
+        replaced = {id(old): new for old, new in zip(candidates, checked, strict=True)}
+        answered = _dedupe([replaced.get(id(hit), hit) for hit in answered])
+        answered.sort(key=lambda hit: hit.probability, reverse=True)
     hits = [hit for hit in answered if hit.probability >= threshold]
-    weak = [hit for hit in answered if settings.absent <= hit.probability < threshold]
+    weak = [
+        hit
+        for hit in answered
+        if hit.probability < threshold and max(hit.probability, hit.screened or 0.0) >= settings.absent
+    ]
     return SearchResult(
         video=video.id,
         query=query if reference is None else f"same {note or 'person or object'} as {reference.name}",
@@ -131,9 +159,7 @@ async def search(
         hits=hits[:limit],
         weak=weak[:3],
         windows_checked=len(sheets),
-        requests=meter.requests,
-        input_tokens=meter.input_tokens,
-        estimated_usd=round(estimated_cost_usd(meter.input_tokens), 6),
+        **meter.spent(),
     )
 
 
@@ -306,6 +332,60 @@ async def _speech_window(
     if not ranked:
         return None
     return _line_hit(video, settings, sheet, lines, ranked, said, None, said, False)
+
+
+VERIFY_SIDE = 784  # three times a tile's width: menu text and one-second events become legible
+# Verification looks between the sampled seconds as well as around them: on the live test a
+# pause menu was on screen for under a second, and the picked tile was a second off.
+SPREAD = 1.5  # seconds either side of each pick
+STEP = 0.5  # seconds between verification frames
+
+
+async def _verify(
+    video: Video, meter: Meter, settings: Settings, hit: Hit, *, query: str, ref: JevImage | None, what: str
+) -> Hit:
+    """Ask one yes/no per full frame around the screening pick(s), one judgment per question."""
+    offsets = [i * STEP for i in range(-int(SPREAD / STEP), int(SPREAD / STEP) + 1)]
+    last = max(video.manifest.duration - 0.05, 0.0)
+    picks = [hit.at, *(moment.at for moment in hit.also[:1])]
+    times = sorted({round(min(max(t + offset, 0.0), last), 3) for t in picks for offset in offsets})
+    paths = await asyncio.gather(*(asyncio.to_thread(still, video, t, VERIFY_SIDE) for t in times))
+    frames = [{"time": stamp(t), "frame": _frame_asset(path)} for t, path in zip(times, paths, strict=True)]
+    state: dict[str, object] = {
+        "about": "Single frames from one stretch of a video, in time order.",
+        "frames": frames,
+    }
+    if ref is not None:
+        state["reference"] = ref
+    subject = f"the same {what} as `reference`" if ref is not None else f"this: {query}"
+    questions: dict[str, Question] = {
+        f"f{i}": Noul(instructions=f"Does `frames[{i}].frame` show {subject}") for i in range(len(times))
+    }
+    answer = await meter.ask(state, questions)
+    scores = [answer.nouls[f"f{i}"].noul for i in range(len(times))]
+    best = max(range(len(times)), key=scores.__getitem__)
+    at, probability = times[best], scores[best]
+    others = sorted(
+        ((times[i], s) for i, s in enumerate(scores) if i != best and s >= 0.5), key=lambda ts: -ts[1]
+    )
+    return hit.model_copy(
+        update={
+            "at": at,
+            "time": stamp(at),
+            "probability": round(probability, 3),
+            "screened": hit.probability,
+            "verified": True,
+            "strong": probability >= settings.found,
+            "frame": str(paths[best]),
+            "also": [Moment(at=t, time=stamp(t), probability=round(s, 3)) for t, s in others[:2]],
+            "transcript": _nearby_speech(video, at),
+        }
+    )
+
+
+def _frame_asset(path: Path) -> JevImage:
+    with Image.open(path) as image:
+        return image_asset(image)
 
 
 def _nearby_speech(video: Video, at: float, radius: float = 8.0) -> str | None:

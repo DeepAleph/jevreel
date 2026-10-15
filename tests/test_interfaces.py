@@ -54,6 +54,8 @@ async def test_mcp_tools(clip: Path, tmp_path: Path, monkeypatch: pytest.MonkeyP
             "zoom_video",
             "video_transcript",
             "ask_whole_video",
+            "run_lens",
+            "query_timeline",
             "list_videos",
         }
         indexed = await client.call_tool("index_video", {"source": str(clip)})

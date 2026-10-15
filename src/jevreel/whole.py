@@ -11,7 +11,6 @@ from typing import Any, Literal
 from pydantic import BaseModel
 from typesafe_sdk import Choice, Noul, Question, Score
 
-from jevreel.config import estimated_cost_usd
 from jevreel.judge import Judge, is_context_overflow
 from jevreel.sheets import storyboard
 from jevreel.states import Meter, image_asset, stamp
@@ -36,6 +35,8 @@ class WholeAnswer(BaseModel):
     storyboard_frames: int
     long_context: bool
     requests: int
+    cached: int
+    """Requests answered from jevreel's cache, at no cost."""
     input_tokens: int
     estimated_usd: float
 
@@ -136,7 +137,5 @@ async def whole(
         confidence=confidence,
         storyboard_frames=len(state["storyboard_times"]),
         long_context=long_context,
-        requests=meter.requests,
-        input_tokens=meter.input_tokens,
-        estimated_usd=round(estimated_cost_usd(meter.input_tokens), 6),
+        **meter.spent(),
     )

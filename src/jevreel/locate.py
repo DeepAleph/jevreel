@@ -13,7 +13,6 @@ from pydantic import BaseModel
 from typesafe_sdk import Box, Noul, Question
 from typesafe_sdk import Image as JevImage
 
-from jevreel.config import estimated_cost_usd
 from jevreel.frames import still
 from jevreel.judge import Judge
 from jevreel.media import MAX_SIDE, fit_with_content, jpeg_bytes
@@ -47,6 +46,8 @@ class Located(BaseModel):
     frame: str
     crop: str | None
     requests: int
+    cached: int
+    """Requests answered from jevreel's cache, at no cost."""
     input_tokens: int
     estimated_usd: float
 
@@ -143,9 +144,7 @@ def _done(base: dict, meter: Meter, **fields: object) -> Located:
     return Located(
         **base,
         **(defaults | fields),
-        requests=meter.requests,
-        input_tokens=meter.input_tokens,
-        estimated_usd=round(estimated_cost_usd(meter.input_tokens), 6),
+        **meter.spent(),
     )
 
 

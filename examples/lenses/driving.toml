@@ -1,0 +1,31 @@
+# A lens for driving footage: run it while indexing (`jevreel index video.mp4 --lens driving.toml`)
+# or on an indexed video (`jevreel lens <video> driving.toml`), then filter with `jevreel query`.
+name = "driving"
+
+[[questions]]
+name = "menu_open"
+type = "noul"
+ask = "Is a game menu or a full-screen map shown instead of gameplay?"
+
+[[questions]]
+name = "on_bridge"
+type = "noul"
+ask = "Is the car driving on a bridge?"
+
+[[questions]]
+name = "weather"
+type = "choice"
+ask = "What is the weather mostly like?"
+options = ["clear", "cloudy", "rain", "snow", "fog"]
+
+[[questions]]
+name = "time_of_day"
+type = "choice"
+ask = "What time of day is it mostly?"
+options = ["day", "dusk", "night"]
+
+[[questions]]
+name = "traffic"
+type = "score"
+ask = "How much other traffic is on the road?"
+levels = ["None", "Light", "Moderate", "Heavy"]

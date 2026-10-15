@@ -14,10 +14,14 @@ from tests.fakes import FakeJudge, box, choice, noul
 pytestmark = pytest.mark.ffmpeg
 
 
-def tiles_rule(window: str, tile: str, p: float):
-    """Say yes, with `tile` as the moment, only on the sheet whose window is `window`."""
+def tiles_rule(window: str, tile: str, p: float, frame: str | None = None, frame_p: float = 0.9):
+    """Say yes, with `tile` as the moment, only on the sheet whose window is `window`; when
+    verifying, say `frame_p` for the full frame whose time is `frame` and no for the others."""
 
     def rule(name: str, question: Question, state: Any) -> dict[str, Any] | None:
+        if "frames" in state and name.startswith("f"):
+            index = int(name[1:])
+            return noul(frame_p if state["frames"][index]["time"] == frame else 0.05)
         if state.get("window") != window:
             return None
         if name == "shown":
@@ -42,7 +46,7 @@ async def test_index_records_sheets_transcript_and_timeline(reel: Reel, fake: Fa
     assert first_state["transcript"] == {"L01": "[0:01] Hello and welcome."}
 
     again = await reel.index(str(clip))
-    assert again.cached and len(fake.calls) == 3
+    assert again.reused and len(fake.calls) == 3
 
 
 async def test_index_without_timeline_needs_no_judge(settings: Settings, clip: Path) -> None:
@@ -55,7 +59,7 @@ async def test_ask_finds_the_moment(settings: Settings, clip: Path) -> None:
     fake = FakeJudge(tiles_rule("0:58-1:58", "T10", 0.92))
     async with Reel(settings, judge=fake) as reel:
         await reel.index(str(clip), timeline=False)
-        result = await reel.ask(str(clip), "a caching diagram", mode="visual")
+        result = await reel.ask(str(clip), "a caching diagram", mode="visual", verify=False)
     assert result.windows_checked == 3 and result.requests == 3
     [hit] = result.hits
     assert (hit.at, hit.time, hit.anchor, hit.sheet) == (67.0, "1:07", "T10", 1)
@@ -67,7 +71,7 @@ async def test_borderline_sheet_is_asked_again_shuffled(settings: Settings, clip
     fake = FakeJudge(tiles_rule("0:00-1:00", "T05", 0.5))
     async with Reel(settings, judge=fake) as reel:
         await reel.index(str(clip), timeline=False)
-        result = await reel.ask(str(clip), "something faint", mode="visual")
+        result = await reel.ask(str(clip), "something faint", mode="visual", recheck=True, verify=False)
     assert result.requests == 4
     rechecks = [s for s, _, _ in fake.calls if "shuffled" in s.get("layout", "")]
     assert len(rechecks) == 1 and rechecks[0]["window"] == "0:00-1:00"
@@ -79,8 +83,9 @@ async def test_threshold_filters_weak_windows(settings: Settings, clip: Path) ->
     fake = FakeJudge(tiles_rule("0:00-1:00", "T05", 0.3))
     async with Reel(settings, judge=fake) as reel:
         await reel.index(str(clip), timeline=False)
-        result = await reel.ask(str(clip), "not really there", mode="visual")
+        result = await reel.ask(str(clip), "not really there", mode="visual", verify=False)
     assert result.hits == []
+    assert result.weak == []  # 0.3 is below the 0.35 "absent" line
 
 
 async def test_speech_mode_picks_a_line(settings: Settings, clip: Path) -> None:
@@ -107,7 +112,7 @@ async def test_find_sends_the_reference(settings: Settings, clip: Path, tmp_path
     fake = FakeJudge(tiles_rule("1:56-2:30", "T03", 0.9))
     async with Reel(settings, judge=fake) as reel:
         await reel.index(str(clip), timeline=False)
-        result = await reel.find(str(clip), photo, note="logo")
+        result = await reel.find(str(clip), photo, note="logo", verify=False)
     assert result.mode == "visual"
     assert all("reference" in state for state, _, _ in fake.calls)
     assert "same logo as `reference`" in str(fake.calls[0][1]["shown"].instructions)
@@ -177,8 +182,8 @@ async def test_recheck_reorders_the_tile_options(settings: Settings, clip: Path)
     fake = FakeJudge(tiles_rule("0:00-1:00", "T05", 0.5))
     async with Reel(settings, judge=fake) as reel:
         await reel.index(str(clip), timeline=False)
-        await reel.ask(str(clip), "something faint", mode="visual")
-    first, again = [q for s, q, _ in fake.calls if s["window"] == "0:00-1:00"]
+        await reel.ask(str(clip), "something faint", mode="visual", recheck=True, verify=False)
+    first, again = [q for s, q, _ in fake.calls if s.get("window") == "0:00-1:00"]
     order = list(first["tile"].criteria)
     shuffled_order = list(again["tile"].criteria)
     assert order[0] == "T01" and shuffled_order != order  # Jev leans toward the first option

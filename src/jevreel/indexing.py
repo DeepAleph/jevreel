@@ -14,6 +14,7 @@ from typesafe_sdk import Choice, Noul, NoulCriteria, Question, Score
 
 from jevreel.config import Settings, estimated_cost_usd
 from jevreel.judge import Judge
+from jevreel.lenses import Lens, lens_path, lens_questions, read_lens, run_lens, save_lens
 from jevreel.media import probe, sample_frames
 from jevreel.sheets import build_sheets, choose_layout
 from jevreel.sources import fetch_url, is_url, video_id
@@ -34,8 +35,12 @@ class IndexResult(BaseModel):
     layout: str
     transcript: str | None
     timeline: bool
-    cached: bool
+    lenses: list[str]
+    reused: bool
+    """True when the video was already indexed and only missing lenses (if any) were run."""
     requests: int
+    cached: int
+    """Requests answered from jevreel's cache, at no cost."""
     input_tokens: int
     estimated_usd: float
     folder: str
@@ -101,15 +106,24 @@ async def index_video(
     force: bool = False,
     timeline: bool = True,
     transcription: TranscribeMode = "auto",
+    lenses: list[Lens] | None = None,
     on_progress: Progress | None = None,
 ) -> IndexResult:
+    lenses = lenses or []
     if not is_url(source):
         source = str(Path(source).expanduser().resolve())
     vid = video_id(source)
     root = store.dir_for(vid)
     existing = store.load(vid)
     if existing is not None and not force and (existing.manifest.has_timeline or not timeline):
-        return _result(existing, cached=True, requests=0, input_tokens=0)
+        # Already indexed: only lenses it has not seen yet cost anything.
+        totals = {"requests": 0, "cached": 0, "input_tokens": 0}
+        for lens in lenses:
+            if not lens_path(existing, lens.name).is_file():
+                ran = await run_lens(existing, judge(), lens)
+                for key in totals:
+                    totals[key] += getattr(ran, key)
+        return _result(existing, reused=True, **totals)
 
     async def progress(stage: str, done: int, total: int) -> None:
         if on_progress is not None:
@@ -172,10 +186,11 @@ async def index_video(
     store.save_manifest(root, manifest)
     video = Video(root, manifest)
     if not timeline:
-        return _result(video, cached=False, requests=0, input_tokens=0)
+        return _result(video, reused=False, requests=0, cached=0, input_tokens=0)
 
     meter = Meter(judge())
     done = 0
+    lens_rows: dict[str, dict[int, dict]] = {lens.name: {} for lens in lenses}
 
     async def judge_sheet(index: int) -> WindowFacets:
         nonlocal done
@@ -183,7 +198,13 @@ async def index_video(
         ids = [tile_id for tile_id, _ in sheet.tiles]
         lines = numbered_lines(video, sheet.start, sheet.end)
         state = sheet_state(video, sheet, sheet_asset(video, sheet), lines=lines)
-        answer = await meter.ask(state, facet_questions(ids))
+        # Lens questions ride in the same request: the sheet image is paid for once.
+        questions = facet_questions(ids)
+        for lens in lenses:
+            questions |= lens_questions(lens, ids)
+        answer = await meter.ask(state, questions)
+        for lens in lenses:
+            lens_rows[lens.name][index] = {"sheet": index, **read_lens(lens, sheet, answer)}
         nouls, choices = answer.nouls, answer.choices
         keyframe = sheet.time_of(choices["keyframe"].choice)
         done += 1
@@ -207,10 +228,16 @@ async def index_video(
     (root / "timeline.json").write_text(
         json.dumps([row.model_dump() for row in rows], indent=1), encoding="utf-8"
     )
+    for lens in lenses:
+        save_lens(video, lens, [lens_rows[lens.name][i] for i in range(len(manifest.sheets))])
     manifest = manifest.model_copy(update={"has_timeline": True, "input_tokens": meter.input_tokens})
     store.save_manifest(root, manifest)
     return _result(
-        Video(root, manifest), cached=False, requests=meter.requests, input_tokens=meter.input_tokens
+        Video(root, manifest),
+        reused=False,
+        requests=meter.requests,
+        cached=meter.cached,
+        input_tokens=meter.input_tokens,
     )
 
 
@@ -231,8 +258,10 @@ async def _transcript(
         return None
 
 
-def _result(video: Video, *, cached: bool, requests: int, input_tokens: int) -> IndexResult:
+def _result(video: Video, *, reused: bool, requests: int, cached: int, input_tokens: int) -> IndexResult:
     m = video.manifest
+    lens_folder = video.root / "lenses"
+    lens_names = sorted(p.stem for p in lens_folder.glob("*.json")) if lens_folder.is_dir() else []
     return IndexResult(
         id=m.id,
         title=m.title,
@@ -242,8 +271,10 @@ def _result(video: Video, *, cached: bool, requests: int, input_tokens: int) -> 
         f"{m.tiles_per_sheet} frames per sheet at {m.fps:g} fps",
         transcript=m.transcript_source,
         timeline=m.has_timeline,
-        cached=cached,
+        lenses=lens_names,
+        reused=reused,
         requests=requests,
+        cached=cached,
         input_tokens=input_tokens,
         estimated_usd=round(estimated_cost_usd(input_tokens), 6),
         folder=str(video.root),

@@ -6,11 +6,14 @@ from typing import Self
 
 from pydantic import BaseModel
 
+from jevreel.cache import CachedJudge
 from jevreel.config import Settings
 from jevreel.frames import Still, zoom
 from jevreel.indexing import IndexResult, Progress, TranscribeMode, index_video
 from jevreel.judge import JevJudge, Judge
+from jevreel.lenses import Lens, LensResult, run_lens
 from jevreel.locate import Located, locate
+from jevreel.query import QueryResult, query
 from jevreel.search import Mode, SearchResult, search
 from jevreel.store import Store
 from jevreel.timefmt import clock
@@ -56,7 +59,10 @@ class Reel:
     def judge(self) -> Judge:
         # Created on first use, so indexing without a timeline, zoom and transcripts need no API key.
         if self._judge is None:
-            self._judge = JevJudge(model=self.settings.model, concurrency=self.settings.concurrency)
+            judge: Judge = JevJudge(model=self.settings.model, concurrency=self.settings.concurrency)
+            if self.settings.cache:
+                judge = CachedJudge(judge, self.settings.home / "cache", self.settings.model)
+            self._judge = judge
         return self._judge
 
     async def index(
@@ -66,6 +72,7 @@ class Reel:
         force: bool = False,
         timeline: bool = True,
         transcription: TranscribeMode = "auto",
+        lenses: list[Lens] | None = None,
         on_progress: Progress | None = None,
     ) -> IndexResult:
         return await index_video(
@@ -76,6 +83,7 @@ class Reel:
             force=force,
             timeline=timeline,
             transcription=transcription,
+            lenses=lenses,
             on_progress=on_progress,
         )
 
@@ -89,7 +97,8 @@ class Reel:
         end: float | None = None,
         threshold: float = 0.5,
         limit: int = 10,
-        recheck: bool = True,
+        recheck: bool = False,
+        verify: bool = True,
     ) -> SearchResult:
         return await search(
             self.store.open(video),
@@ -102,6 +111,7 @@ class Reel:
             threshold=threshold,
             limit=limit,
             recheck=recheck,
+            verify=verify,
         )
 
     async def find(
@@ -114,7 +124,8 @@ class Reel:
         end: float | None = None,
         threshold: float = 0.5,
         limit: int = 10,
-        recheck: bool = True,
+        recheck: bool = False,
+        verify: bool = True,
     ) -> SearchResult:
         reference = Path(image).expanduser()
         if not reference.is_file():
@@ -131,6 +142,7 @@ class Reel:
             threshold=threshold,
             limit=limit,
             recheck=recheck,
+            verify=verify,
         )
 
     async def locate(
@@ -161,6 +173,14 @@ class Reel:
         self, video: str, question: str, *, kind: Kind = "noul", options: list[str] | None = None
     ) -> WholeAnswer:
         return await whole(self.store.open(video), self.judge, question=question, kind=kind, options=options)
+
+    async def lens(self, video: str, lens: Lens) -> LensResult:
+        """Run a lens over an already indexed video: one request per sheet, answers kept on disk."""
+        return await run_lens(self.store.open(video), self.judge, lens)
+
+    def query(self, video: str, where: str | None = None) -> QueryResult:
+        """Filter the timeline (default answers and lenses) without any requests."""
+        return query(self.store.open(video), where)
 
     def videos(self) -> list[VideoSummary]:
         return [

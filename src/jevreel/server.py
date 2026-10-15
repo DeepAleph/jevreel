@@ -11,6 +11,7 @@ from fastmcp_tasks import TasksExtension
 from mcp_types import ToolAnnotations
 from pydantic import Field
 
+from jevreel.lenses import Lens
 from jevreel.reel import Reel
 from jevreel.search import SearchResult
 
@@ -26,6 +27,12 @@ Workflow:
    locate_in_frame boxes and crops a target in one frame for close reading.
 4. video_transcript for what is said around a moment. ask_whole_video for one answer about the
    entire video (genre, structure, whether something ever happens).
+5. Lenses: when the user cares about the same things across a video (safety, brands, who is on
+   screen), run_lens asks your own typed questions of every minute once; query_timeline then filters
+   the answers as often as needed with no further cost.
+
+Hits marked verified were re-checked on full frames; their probability and time come from those.
+When hits are few, look at `weak`: windows Jev did not rule out.
 
 Jev's probabilities are tuned for ranking, not guaranteed calibrated: zoom in before stating
 anything you have not seen. Cite moments with the times the tools return (e.g. 12:04)."""
@@ -50,11 +57,14 @@ def reel() -> Reel:
 
 
 def _thumbnails(result: SearchResult, count: int) -> list[McpImage]:
-    """The tile Jev picked for each top hit, cropped from its contact sheet: small, cheap evidence."""
+    """Evidence for the top hits: the verified full frame, or else the tile cropped from its sheet."""
     video = reel().store.open(result.video)
     layout = video.manifest.layout
     images = []
     for hit in result.hits[:count]:
+        if hit.frame:
+            images.append(McpImage(path=Path(hit.frame)))
+            continue
         sheet = video.manifest.sheets[hit.sheet]
         slot = next((i for i, (tile_id, _) in enumerate(sheet.tiles) if tile_id == hit.anchor), None)
         if slot is None:
@@ -71,15 +81,21 @@ async def index_video(
     source: Annotated[str, Field(description="Path to a local video file, or a video URL.")],
     ctx: Context,
     force: Annotated[bool, Field(description="Re-index even if this video was indexed before.")] = False,
+    lenses: Annotated[
+        list[Lens] | None,
+        Field(
+            description="Your own questions to ask of every minute while indexing, at almost no extra cost."
+        ),
+    ] = None,
 ) -> ToolResult:
     """Prepare a video: contact sheets at 1 frame per second, the transcript (captions, or local
     speech-to-text if installed), and a timeline of default answers for every minute. Run once per video;
-    later calls return the cached index immediately."""
+    later calls return the cached index immediately and only run lenses it has not seen."""
 
     async def progress(stage: str, done: int, total: int) -> None:
         await ctx.report_progress(done, total, f"{stage}: {done}/{total}")
 
-    result = await reel().index(source, force=force, on_progress=progress)
+    result = await reel().index(source, force=force, lenses=lenses, on_progress=progress)
     return ToolResult(content=result.model_dump_json(indent=1), structured_content=result.model_dump())
 
 
@@ -98,13 +114,14 @@ async def ask_video(
     start: Annotated[float | None, Field(description="Only search from this second.", ge=0)] = None,
     end: Annotated[float | None, Field(description="Only search up to this second.", ge=0)] = None,
     limit: Annotated[int, Field(description="Most hits to return.", ge=1, le=50)] = 8,
-    thumbnails: Annotated[
-        int, Field(description="How many top hits to show as tile images.", ge=0, le=12)
-    ] = 4,
+    thumbnails: Annotated[int, Field(description="How many top hits to show as images.", ge=0, le=12)] = 4,
+    verify: Annotated[
+        bool, Field(description="Re-check the top-ranked windows on full frames (recommended).")
+    ] = True,
 ) -> ToolResult:
-    """Find the moments in a video that match a description. Jev checks every contact sheet in parallel
-    and returns the moments it is most sure of, with times, probabilities and nearby transcript."""
-    result = await reel().ask(video, query, mode=mode, start=start, end=end, limit=limit)
+    """Find the moments in a video that match a description. Jev screens every contact sheet in parallel,
+    re-checks the top-ranked windows on full frames, and returns times, probabilities and nearby speech."""
+    result = await reel().ask(video, query, mode=mode, start=start, end=end, limit=limit, verify=verify)
     return ToolResult(
         content=[result.model_dump_json(indent=1), *_thumbnails(result, thumbnails)],
         structured_content=result.model_dump(),
@@ -124,10 +141,11 @@ async def find_in_video(
     end: Annotated[float | None, Field(ge=0)] = None,
     limit: Annotated[int, Field(ge=1, le=50)] = 8,
     thumbnails: Annotated[int, Field(ge=0, le=12)] = 4,
+    verify: Annotated[bool, Field(description="Re-check the top-ranked windows on full frames.")] = True,
 ) -> ToolResult:
     """Find every moment the subject of a reference photo appears, without embeddings: Jev compares
-    the photo with every contact sheet."""
-    result = await reel().find(video, image_path, note=note, start=start, end=end, limit=limit)
+    the photo with every contact sheet, then re-checks the best windows on full frames."""
+    result = await reel().find(video, image_path, note=note, start=start, end=end, limit=limit, verify=verify)
     return ToolResult(
         content=[result.model_dump_json(indent=1), *_thumbnails(result, thumbnails)],
         structured_content=result.model_dump(),
@@ -206,6 +224,31 @@ async def ask_whole_video(
     """One typed answer about the whole video, from a single request that sees a storyboard of the video,
     the per-minute timeline and the full transcript."""
     result = await reel().whole(video, question, kind=kind, options=options)
+    return ToolResult(content=result.model_dump_json(indent=1), structured_content=result.model_dump())
+
+
+@mcp.tool(annotations=ToolAnnotations(read_only_hint=False, open_world_hint=True))
+async def run_lens(video: VideoRef, lens: Lens) -> ToolResult:
+    """Ask your own typed questions of every minute of an indexed video and keep the answers as timeline
+    columns. Questions: noul (yes/no; also finds the second it happens), choice (options), or score
+    (levels, lowest first). One request per minute; filter the results afterwards with query_timeline."""
+    result = await reel().lens(video, lens)
+    return ToolResult(content=result.model_dump_json(indent=1), structured_content=result.model_dump())
+
+
+@mcp.tool(annotations=READ_ONLY)
+def query_timeline(
+    video: VideoRef,
+    where: Annotated[
+        str | None,
+        Field(
+            description="Conditions joined by 'and', e.g. 'people > 0.8 and setting == outdoors' or "
+            "'safety.helmet_off >= 0.7'. Omit to get every minute."
+        ),
+    ] = None,
+) -> ToolResult:
+    """Filter a video's per-minute timeline (default answers plus every lens) with no requests and no cost."""
+    result = reel().query(video, where)
     return ToolResult(content=result.model_dump_json(indent=1), structured_content=result.model_dump())
 
 

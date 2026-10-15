@@ -13,6 +13,7 @@ from PIL import Image
 from typesafe_sdk import Image as JevImage
 from typesafe_sdk import Question, SystemOneResponse
 
+from jevreel.config import estimated_cost_usd
 from jevreel.judge import Judge
 from jevreel.media import fit_for_jev, jpeg_bytes
 from jevreel.sheets import SheetInfo, tile_ids
@@ -90,12 +91,25 @@ class Meter:
     def __init__(self, judge: Judge) -> None:
         self.judge = judge
         self.requests = 0
+        self.cached = 0
         self.input_tokens = 0
 
     async def ask(
         self, state: Any, questions: Mapping[str, Question], *, long_context: bool = False
     ) -> SystemOneResponse:
         result = await self.judge.ask(state, questions, long_context=long_context)
-        self.requests += 1
-        self.input_tokens += result.usage.input_tokens or 0
+        if result.usage.input_tokens:
+            self.requests += 1
+            self.input_tokens += result.usage.input_tokens
+        else:
+            self.cached += 1  # answered from jevreel's cache, free
         return result
+
+    def spent(self) -> dict[str, int | float]:
+        """The cost fields every result reports."""
+        return {
+            "requests": self.requests,
+            "cached": self.cached,
+            "input_tokens": self.input_tokens,
+            "estimated_usd": round(estimated_cost_usd(self.input_tokens), 6),
+        }

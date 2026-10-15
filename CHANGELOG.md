@@ -13,9 +13,21 @@ All notable changes to this project are documented here. The format follows
 - Contact sheets at 1 frame per second, with labelled tiles; tile timestamps kept in code.
 - `index`: sheets, transcript (sidecar captions, URL captions via yt-dlp, or local faster-whisper),
   and a typed per-minute timeline from Jev.
-- `ask`: parallel per-sheet search, visual and speech as separate questions, with borderline sheets
-  re-asked with tiles moved and Choice options reordered; near misses reported as `weak`.
-- `find`: search by reference photo.
+- `ask`: parallel per-sheet screening, visual and speech as separate questions, then verification of
+  the top-ranked windows with one yes/no per full frame every half second around the pick. Near
+  misses, and leads verification overturned, are reported as `weak`.
+- Lenses: your own typed questions (yes/no, choice, score) asked of every sheet, either inside the
+  indexing requests or as a later pass, and kept as timeline columns.
+- `query`: filter the timeline (default answers and lenses) with no requests.
+- An on-disk answer cache: the same model, images and questions are never paid for twice.
+- `find`: search by reference photo, verified the same way.
 - `locate`: Box on a full-resolution frame, gated by a Noul, with TypeSafe's edge check.
 - `zoom`, `transcript`, `whole` (one typed answer about the entire video), `measure`.
-- MCP server (FastMCP 4, background indexing through the tasks extension) and an Agent Skill.
+- MCP server (FastMCP 4, background indexing through the tasks extension) with ten tools, and an
+  Agent Skill.
+
+### Fixed during development
+
+- Sheet tiles and full-frame grabs disagreed by about half a second: ffmpeg's default `fps` rounding
+  put the frame at n + 0.47 s on the tile labelled n. Sampling now uses `round=up`, and a test checks
+  tiles and grabs against a filter-free decode.

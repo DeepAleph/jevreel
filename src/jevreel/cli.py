@@ -14,6 +14,7 @@ from typesafe_sdk import TypeSafeError
 
 from jevreel import __version__
 from jevreel.config import Settings
+from jevreel.lenses import Lens
 from jevreel.media import MediaError
 from jevreel.reel import Reel
 from jevreel.search import Mode
@@ -72,6 +73,14 @@ def run(make: Callable[[Reel], Awaitable[T]]) -> T:
         raise typer.Exit(1) from None
 
 
+def load_lens(path: Path) -> Lens:
+    try:
+        return Lens.load(path)
+    except (OSError, ValueError) as error:  # missing file, bad TOML or JSON, or an invalid lens
+        typer.echo(f"error: lens {path}: {error}", err=True)
+        raise typer.Exit(1) from None
+
+
 def version_callback(value: bool) -> None:
     if value:
         typer.echo(__version__)
@@ -95,8 +104,13 @@ def index(
         bool, typer.Option(help="Ask every sheet the default questions (needs an API key).")
     ] = True,
     asr: Annotated[bool, typer.Option(help="Use local speech-to-text when there are no captions.")] = True,
+    lens: Annotated[
+        list[Path] | None,
+        typer.Option("--lens", "-l", help="A lens file (TOML or JSON) to ask while indexing; repeat it."),
+    ] = None,
 ) -> None:
     """Build contact sheets, get the transcript, and record a typed timeline."""
+    lenses = [load_lens(path) for path in lens or []]
 
     async def progress(stage: str, done: int, total: int) -> None:
         end = "\n" if done == total else ""
@@ -108,6 +122,7 @@ def index(
             force=force,
             timeline=timeline,
             transcription="auto" if asr else "never",
+            lenses=lenses,
             on_progress=progress,
         )
     )
@@ -123,7 +138,13 @@ def ask(
     end: Annotated[str | None, typer.Option(help="Search up to this time.")] = None,
     threshold: Annotated[float, typer.Option(help="Lowest yes-probability to report.")] = 0.5,
     limit: Annotated[int, typer.Option(help="Most hits to report.")] = 10,
-    recheck: Annotated[bool, typer.Option(help="Re-ask borderline sheets with shuffled tiles.")] = True,
+    verify: Annotated[bool, typer.Option(help="Re-check the top-ranked windows on full frames.")] = True,
+    recheck: Annotated[
+        bool,
+        typer.Option(
+            help="Also re-ask borderline sheets with shuffled tiles (mostly useful with --no-verify)."
+        ),
+    ] = False,
 ) -> None:
     """Find the moments that match a description."""
     if mode not in ("auto", "visual", "speech", "both"):
@@ -140,6 +161,7 @@ def ask(
                 threshold=threshold,
                 limit=limit,
                 recheck=recheck,
+                verify=verify,
             )
         )
     )
@@ -154,6 +176,7 @@ def find(
     end: Annotated[str | None, typer.Option()] = None,
     threshold: Annotated[float, typer.Option()] = 0.5,
     limit: Annotated[int, typer.Option()] = 10,
+    verify: Annotated[bool, typer.Option(help="Re-check the top-ranked windows on full frames.")] = True,
 ) -> None:
     """Find every moment the subject of a reference photo appears."""
     emit(
@@ -166,6 +189,7 @@ def find(
                 end=parse_time(end),
                 threshold=threshold,
                 limit=limit,
+                verify=verify,
             )
         )
     )
@@ -229,6 +253,32 @@ def whole(
         raise typer.BadParameter("kind must be noul, choice or score")
     chosen: Kind = kind  # type: ignore[assignment]
     emit(run(lambda reel: reel.whole(video, question, kind=chosen, options=option)))
+
+
+@app.command("lens")
+def run_lens(
+    video: Video,
+    lens_file: Annotated[Path, typer.Argument(help="Lens file (TOML or JSON) with the questions to ask.")],
+) -> None:
+    """Ask a lens of every sheet of an indexed video (one request per sheet)."""
+    lens = load_lens(lens_file)
+    emit(run(lambda reel: reel.lens(video, lens)))
+
+
+@app.command()
+def query(
+    video: Video,
+    where: Annotated[
+        str | None,
+        typer.Argument(help='e.g. "people > 0.8 and setting == outdoors" or "safety.helmet_off >= 0.7"'),
+    ] = None,
+) -> None:
+    """Filter the per-minute timeline (default answers and lenses). No requests, no cost."""
+
+    async def go(reel: Reel) -> Any:
+        return reel.query(video, where)
+
+    emit(run(go))
 
 
 @app.command("list")
