@@ -24,3 +24,6 @@ htmlcov/
 *.mov
 *.webm
 !tests/fixtures/**
+
+# The demo clips shown in the README
+!docs/demo/clips/*.mp4

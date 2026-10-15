@@ -6,6 +6,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Demo clips in `docs/demo/clips`: five recorded Claude Code sessions using jevreel on
+  *Tears of Steel*.
+- Videos can be named by their title's words or a unique title prefix: "tears of steel" or "tears"
+  finds `tears_of_steel.mov`.
+- `query` values that contain "and" can be quoted: `place == 'books and a desk'`.
+
+### Fixed
+
+- A missing video or reference photo now says which path was tried and where relative paths are
+  resolved from. On Windows the bare OS error read like a missing program, and an agent gave up on it.
+- The answer cache treated requests that differed only in the order of a Choice's options as the
+  same request. Order is part of what Jev reads, so it now counts.
+
 ## [0.1.0]
 
 ### Added

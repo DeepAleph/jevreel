@@ -1,27 +1,66 @@
 # jevreel
 
-**Search and understand video without embeddings.**
-
-jevreel lays a video out on labelled contact sheets, one frame per second and sixty frames to an
-image, and has [Jev](https://docs.typesafe.ai), TypeSafe's fast decision model, judge every sheet in
-parallel. The best windows are re-checked on full frames. Your agent (Claude Code, Codex, Cursor,
-Claude Desktop, anything that speaks MCP) gets back moments, times and probabilities, then looks
-closer itself.
-
-A real run on 10 minutes of 1080p gameplay, summarized (the CLI prints JSON):
-
-```text
-$ jevreel ask gta "the game's pause menu is open"
-hits      0:08.5 (p=0.99)   2:19.5 (p=1.00)   10:12.5 (p=1.00)    every appearance, each under a second long
-spent     15 requests · 103k input tokens · $0.0043
-again     0 requests · $0 (answered from cache)
-```
+**A zero-embedding approach to video intelligence, using Jev.**
 
 [![CI](https://github.com/Madhav2609/jevreel/actions/workflows/ci.yml/badge.svg)](https://github.com/Madhav2609/jevreel/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)
 
-## Why no embeddings
+jevreel lays a video out on labelled contact sheets, one frame per second and sixty frames to an
+image, and has [Jev](https://docs.typesafe.ai), TypeSafe's fast decision model, judge every sheet in
+parallel. The best windows are re-checked on full frames. Your agent (Claude Code, Codex, Cursor,
+Claude Desktop, anything that speaks MCP) gets back moments, times and probabilities, then looks
+closer itself. No vectors are computed or stored anywhere.
+
+<a href="docs/demo/clips/intro.mp4"><img src="docs/demo/clips/intro.webp" alt="How jevreel works: a 12-minute film becomes 13 contact sheets, Jev judges them in parallel, the best windows are verified on full frames, and the agent gets timed hits" width="100%"></a>
+
+## See it work
+
+Five unedited Claude Code sessions using the jevreel MCP server and skill on Blender's open movie
+[*Tears of Steel*](https://mango.blender.org) (12:14, (CC) Blender Foundation,
+[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)). Each clip is drawn from its
+recording: the agent's tool calls, what Jev answered for every sheet and frame, the hits, the cost,
+and the agent's own answer, quoted. Click a clip for the full-resolution video.
+
+| | Asked | What happened | Jev |
+| - | - | - | - |
+| 1 | Is there a moment where someone drinks from a juice box? | 13 sheets screened, 6 windows verified on full frames, 2 kept: **2:28.5** (p 0.95) and 12:06.5 (0.86) | 19 requests, $0.0054 |
+| 2 | When does Thom apologise to Celia, and what does he say? | Speech mode over the captions: 6:47 *"I'm sorry."* (0.85), and a blurted *"Sorry!"* at 5:02 the agent set aside | 10 requests, $0.0003 |
+| 3 | Somebody reads a newspaper early on. What does the headline say? | First 5 minutes only: verified at **1:20.5** (0.94); the agent read *ROBOTICIST CREATES KILLER ROBOTS* off the frame | 8 requests, $0.0024 |
+| 4 | `captain.jpg` is a character. List every scene he's in. | Search by photo: 8 moments, 6 verified at 0.86–0.97, 2 more confirmed by the agent with `zoom` | 19 requests, $0.0064 |
+| 5 | Map the film: robots, guns, holograms, settings, and what kind of film. | The agent wrote its own 4-question lens, read the per-minute rows back for free, and asked one whole-film question | 14 requests, $0.0051 |
+
+### 1. Find a three-second moment
+
+<a href="docs/demo/clips/a-juice.mp4"><img src="docs/demo/clips/a-juice.webp" alt="Use case 1: screening 13 contact sheets for a juice box, verifying the top windows, and the agent's answer" width="100%"></a>
+
+### 2. Search the dialogue
+
+<a href="docs/demo/clips/b-apology.mp4"><img src="docs/demo/clips/b-apology.webp" alt="Use case 2: speech-mode search over caption lines, the picked line, and the agent's answer" width="100%"></a>
+
+### 3. Read what's on screen
+
+<a href="docs/demo/clips/c-newspaper.mp4"><img src="docs/demo/clips/c-newspaper.webp" alt="Use case 3: finding the newspaper in the first five minutes and the headline the agent read" width="100%"></a>
+
+### 4. Find a person from a photo
+
+<a href="docs/demo/clips/d-captain.mp4"><img src="docs/demo/clips/d-captain.webp" alt="Use case 4: searching by a reference photo, verified windows, and every moment on a timeline" width="100%"></a>
+
+The reference photo is a crop of the frame at 9:18, so the 9:17 hit is its own source; the other
+seven are what the search found.
+
+### 5. Map a whole film
+
+<a href="docs/demo/clips/e-map.mp4"><img src="docs/demo/clips/e-map.webp" alt="Use case 5: an agent-written lens, the per-minute heatmap, the whole-film question, and the agent's map" width="100%"></a>
+
+The session starts with two failed calls, left in: a shell command the recording didn't allow, then
+a wrong folder. The error names the folder relative paths resolve from, and the next call works.
+
+## Why a decision model instead of embeddings
+
+Multimodal embedding models already search video well: EmbeddingGemma 2 (October 2026) puts text,
+images, video frames and audio in one vector space and runs on a phone. jevreel takes a different
+route to the same goal, with different trade-offs.
 
 - **Your question, not a fixed notion of "similar".** An embedding index decides at index time what
   counts as close. A decision model judges the question you ask now, and returns a probability your
@@ -33,6 +72,13 @@ again     0 requests · $0 (answered from cache)
   at almost no extra cost, then filter them as often as you like for nothing.
 - **The expensive model only sees what passed.** Your agent gets the few moments that matter, as
   full-resolution frames, rather than a pile of thumbnails.
+- **Typed answers, not just rankings.** Yes/no with the second it happens, one of your options, or a
+  level on your scale, per minute or for the whole video.
+
+Embeddings are the better fit for querying a large library over and over: once the vectors exist,
+each search is a lookup that costs nothing, while every jevreel question pays Jev for the minutes it
+screens (about $0.02–0.03 per hour of video). The two combine well: embeddings to shortlist
+videos, jevreel to find, verify and describe the moment.
 
 ## How it works
 
