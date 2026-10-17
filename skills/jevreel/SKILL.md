@@ -12,8 +12,10 @@ descriptions: reading, describing and concluding is your job.
 
 ## Setup check
 
-- `TYPESAFE_API_KEY` must be set for anything that asks Jev (indexing with a timeline, ask, find,
-  locate, whole, lenses). Zoom, transcripts and timeline queries work without it.
+- A TypeSafe API key is needed for anything that asks Jev (indexing with a timeline, ask, find,
+  locate, whole, lenses): `TYPESAFE_API_KEY`, or a key saved with `jevreel login`. Zoom, transcripts
+  and timeline queries work without it. If tools report a missing key under Codex, have the user run
+  `uvx --from "jevreel[url]==0.2.0" jevreel login` themselves (it asks for the key; never ask for it in chat).
 - `ffmpeg` and `ffprobe` must be on PATH.
 - URLs need `jevreel[url]`; videos without captions need `jevreel[asr]` for a transcript.
 

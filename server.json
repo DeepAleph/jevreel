@@ -1,0 +1,38 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.DeepAleph/jevreel",
+  "title": "jevreel",
+  "description": "Search and understand videos without embeddings: contact sheets plus Jev typed decisions.",
+  "repository": {
+    "url": "https://github.com/DeepAleph/jevreel",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/DeepAleph/jevreel",
+  "version": "0.2.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "jevreel",
+      "version": "0.2.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "TYPESAFE_API_KEY",
+          "description": "TypeSafe API key for Jev, from https://console.typesafe.ai",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

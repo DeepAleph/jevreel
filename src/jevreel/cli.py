@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from typesafe_sdk import TypeSafeError
 
 from jevreel import __version__
-from jevreel.config import Settings
+from jevreel.config import Settings, save_api_key
 from jevreel.lenses import Lens
 from jevreel.media import MediaError
 from jevreel.reel import Reel
@@ -313,6 +313,15 @@ def mcp() -> None:
     from jevreel.server import main as serve
 
     serve()
+
+
+@app.command()
+def login() -> None:
+    """Save your TypeSafe API key, for agents that don't pass TYPESAFE_API_KEY to MCP servers."""
+    key = typer.prompt("TypeSafe API key", hide_input=True).strip()
+    if not key:
+        raise typer.BadParameter("The key is empty.")
+    typer.echo(f"Saved to {save_api_key(key)}. TYPESAFE_API_KEY still wins when it is set.", err=True)
 
 
 @app.command()

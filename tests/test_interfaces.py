@@ -9,6 +9,7 @@ from typer.testing import CliRunner
 
 from jevreel import Reel, Settings, __version__, server
 from jevreel.cli import app, parse_time
+from jevreel.config import api_key
 from tests.fakes import FakeJudge
 
 runner = CliRunner()
@@ -26,6 +27,19 @@ def test_version_and_help() -> None:
     help_text = runner.invoke(app, ["--help"]).output
     for command in ("index", "ask", "find", "locate", "zoom", "transcript", "whole", "mcp"):
         assert command in help_text
+
+
+def test_login_saves_a_key_the_environment_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JEVREEL_CONFIG", str(tmp_path / "config"))
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    assert api_key() is None
+    saved = runner.invoke(app, ["login"], input="ts-saved\n")
+    assert saved.exit_code == 0, saved.output
+    assert api_key() == "ts-saved"
+    monkeypatch.setenv("TYPESAFE_API_KEY", "${user_config.typesafe_api_key}")  # left unexpanded by the host
+    assert api_key() == "ts-saved"
+    monkeypatch.setenv("TYPESAFE_API_KEY", "ts-env")
+    assert api_key() == "ts-env"
 
 
 @pytest.mark.ffmpeg

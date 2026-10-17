@@ -7,7 +7,7 @@ from typing import Self
 from pydantic import BaseModel
 
 from jevreel.cache import CachedJudge
-from jevreel.config import Settings
+from jevreel.config import Settings, api_key
 from jevreel.frames import Still, zoom
 from jevreel.indexing import IndexResult, Progress, TranscribeMode, index_video
 from jevreel.judge import JevJudge, Judge
@@ -59,7 +59,9 @@ class Reel:
     def judge(self) -> Judge:
         # Created on first use, so indexing without a timeline, zoom and transcripts need no API key.
         if self._judge is None:
-            judge: Judge = JevJudge(model=self.settings.model, concurrency=self.settings.concurrency)
+            judge: Judge = JevJudge(
+                model=self.settings.model, concurrency=self.settings.concurrency, api_key=api_key()
+            )
             if self.settings.cache:
                 judge = CachedJudge(judge, self.settings.home / "cache", self.settings.model)
             self._judge = judge

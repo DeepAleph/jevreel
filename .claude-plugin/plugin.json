@@ -1,0 +1,42 @@
+{
+  "name": "jevreel",
+  "version": "0.2.0",
+  "description": "Search and understand videos without embeddings: contact sheets plus Jev typed decisions, as MCP tools and a skill.",
+  "author": {
+    "name": "Madhav Gupta",
+    "url": "https://github.com/DeepAleph"
+  },
+  "homepage": "https://github.com/DeepAleph/jevreel",
+  "repository": "https://github.com/DeepAleph/jevreel",
+  "license": "MIT",
+  "keywords": [
+    "video",
+    "video-understanding",
+    "jev",
+    "mcp",
+    "zero-embedding"
+  ],
+  "mcpServers": {
+    "jevreel": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "jevreel[url]==0.2.0",
+        "jevreel",
+        "mcp"
+      ],
+      "env": {
+        "TYPESAFE_API_KEY": "${user_config.typesafe_api_key}"
+      }
+    }
+  },
+  "userConfig": {
+    "typesafe_api_key": {
+      "type": "string",
+      "title": "TypeSafe API key",
+      "description": "Jev runs on TypeSafe. Get one at https://console.typesafe.ai; it is kept in your system's credential store.",
+      "required": true,
+      "sensitive": true
+    }
+  }
+}

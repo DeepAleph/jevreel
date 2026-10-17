@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-17
+
+### Added
+
+- Plugin packaging for Claude Code (`.claude-plugin/`) and Codex (`plugin.json`, `mcp.json`,
+  `.agents/plugins/marketplace.json`): the MCP server and the skill in one install, with this repo
+  as the marketplace. Claude Code asks for the TypeSafe key and keeps it in the credential store.
+- `jevreel login` saves the TypeSafe API key for agents that don't pass `TYPESAFE_API_KEY` to MCP
+  servers (Codex plugins). The environment variable still wins, unless it is an unexpanded `${...}`.
+- `server.json` and the README's `mcp-name` line, for the official MCP Registry.
+
 ## [0.1.0] - 2026-10-15
 
 ### Added
@@ -41,5 +52,6 @@ All notable changes to this project are documented here. The format follows
 - The answer cache treated requests that differed only in the order of a Choice's options as the
   same request. Order is part of what Jev reads, so it now counts.
 
-[Unreleased]: https://github.com/DeepAleph/jevreel/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/DeepAleph/jevreel/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/DeepAleph/jevreel/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/DeepAleph/jevreel/releases/tag/v0.1.0

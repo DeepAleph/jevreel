@@ -1,0 +1,31 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "jevreel",
+  "version": "0.2.0",
+  "description": "Search and understand videos without embeddings: contact sheets plus Jev typed decisions, as MCP tools and a skill.",
+  "author": {
+    "name": "Madhav Gupta",
+    "url": "https://github.com/DeepAleph"
+  },
+  "homepage": "https://github.com/DeepAleph/jevreel",
+  "repository": "https://github.com/DeepAleph/jevreel",
+  "license": "MIT",
+  "keywords": ["video", "video-understanding", "jev", "mcp", "zero-embedding"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "jevreel",
+        "shortDescription": "Search and understand videos without embeddings",
+        "longDescription": "Find moments, people, objects and on-screen text in a video file or URL. Jev screens every second on contact sheets, re-checks the best windows on full frames, and hands you the frames to look at. Needs FFmpeg, uv and a TypeSafe API key saved once with `uvx --from \"jevreel[url]==0.2.0\" jevreel login`.",
+        "developerName": "Madhav Gupta",
+        "category": "Productivity",
+        "capabilities": ["Read"],
+        "websiteURL": "https://github.com/DeepAleph/jevreel",
+        "defaultPrompt": [
+          "Use jevreel to find when the speaker shows a bar chart in talk.mp4.",
+          "Use jevreel to find every moment the person in photo.jpg appears in this video."
+        ]
+      }
+    }
+  }
+}

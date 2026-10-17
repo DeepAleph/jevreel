@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "jevreel": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["--from", "jevreel[url]==0.2.0", "jevreel", "mcp"]
+    }
+  }
+}

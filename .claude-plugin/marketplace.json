@@ -1,0 +1,15 @@
+{
+  "name": "jevreel",
+  "description": "jevreel: search and understand videos without embeddings.",
+  "owner": {
+    "name": "Madhav Gupta",
+    "url": "https://github.com/DeepAleph"
+  },
+  "plugins": [
+    {
+      "name": "jevreel",
+      "source": "./",
+      "description": "Find moments, people and on-screen text in videos with Jev, without embeddings."
+    }
+  ]
+}

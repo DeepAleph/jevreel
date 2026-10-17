@@ -6,6 +6,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/DeepAleph/jevreel/blob/main/LICENSE)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)
 
+<!-- mcp-name: io.github.DeepAleph/jevreel -->
+
 jevreel lays a video out on labelled contact sheets, one frame per second and sixty frames to an
 image, and has [Jev](https://docs.typesafe.ai), TypeSafe's fast decision model, judge every sheet in
 parallel. The best windows are re-checked on full frames. Your agent (Claude Code, Codex, Cursor,
@@ -169,6 +171,32 @@ jevreel query drive "weather == snow and traffic >= 2"
 
 The MCP server exposes ten tools. The skill teaches agents the workflow: ask, look before claiming
 anything, cite times.
+
+### As a plugin
+
+The plugin bundles the MCP server and the skill. It starts the server with
+`uvx --from "jevreel[url]==0.2.0"`, so you need [uv](https://docs.astral.sh/uv/) and FFmpeg on
+your PATH. Local speech-to-text is left out to keep the first start quick; for it, add the server
+by hand with `jevreel[all]` as shown further down.
+
+**Claude Code** asks for your TypeSafe API key when you enable the plugin and keeps it in your
+system's credential store:
+
+```bash
+claude plugin marketplace add DeepAleph/jevreel
+claude plugin install jevreel@jevreel
+```
+
+**Codex** passes plugin servers only an allowlist of environment variables, so save the key once.
+The same command installs the environment the plugin starts, so its first start is fast:
+
+```bash
+uvx --from "jevreel[url]==0.2.0" jevreel login
+codex plugin marketplace add DeepAleph/jevreel
+codex plugin add jevreel@jevreel
+```
+
+### By hand
 
 **Claude Code**
 

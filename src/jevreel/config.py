@@ -4,7 +4,7 @@ import os
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from platformdirs import user_cache_path
+from platformdirs import user_cache_path, user_config_path
 
 # Pinned rather than an alias: Box questions and image input need Jev 1.14, and `jev-latest`
 # and `jev-preview` move between releases without notice to us.
@@ -83,6 +83,36 @@ class Settings:
         if self.verify_top < 0:
             raise ValueError("verify_top must be 0 (off) or more.")
         return self
+
+
+def key_path() -> Path:
+    """Where `jevreel login` saves the TypeSafe API key."""
+    return Path(os.environ.get("JEVREEL_CONFIG") or user_config_path("jevreel", appauthor=False)) / "api_key"
+
+
+def api_key() -> str | None:
+    """TYPESAFE_API_KEY, else the key `jevreel login` saved.
+
+    The saved key exists for agents that start MCP servers with a trimmed environment: Codex passes
+    plugin servers only an allowlist of variables, and a plugin can't add to it.
+    A literal `${...}` is a placeholder the host didn't fill in, not a key: Codex 0.144 reads the
+    Claude plugin manifest and passes `${user_config.typesafe_api_key}` through unexpanded.
+    """
+    key = os.environ.get("TYPESAFE_API_KEY", "").strip()
+    if key and not key.startswith("${"):
+        return key
+    try:
+        return key_path().read_text(encoding="utf-8").strip() or None
+    except FileNotFoundError:
+        return None
+
+
+def save_api_key(key: str) -> Path:
+    path = key_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(key.strip() + "\n", encoding="utf-8")
+    path.chmod(0o600)  # owner-only on POSIX; Windows keeps the profile folder's own ACL
+    return path
 
 
 def estimated_cost_usd(input_tokens: int) -> float:

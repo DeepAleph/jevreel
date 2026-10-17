@@ -1,6 +1,6 @@
 [project]
 name = "jevreel"
-version = "0.1.0"
+version = "0.2.0"
 description = "Zero-embedding video intelligence: contact sheets + Jev typed decisions, as tools for any coding agent."
 readme = "README.md"
 license = "MIT"
